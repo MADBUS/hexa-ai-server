@@ -50,7 +50,7 @@ Adapter (Web) → Application (UseCase) → Domain ← Infrastructure (DB, API)
 - [x] `HAIS-2` [Shared] MBTI 유효성 검증 - "XXXX", "INXX" 등 유효하지 않은 값 거부
 - [x] `HAIS-3` [Shared] MBTI 차원별 조회 - `get_dimension(index)` 메서드로 E/I, S/N, T/F, J/P 개별 접근
 - [x] `HAIS-4` [Shared] Gender 값 객체 - MALE/FEMALE 생성 및 유효성 검증
-- [ ] `HAIS-5` [Shared] UserProfile 값 객체 - Gender + MBTI 조합, 필수값 검증
+- [x] `HAIS-5` [Shared] UserProfile 값 객체 - Gender + MBTI 조합, 필수값 검증
 
 #### Auth Domain (인증 시스템 🔐)
 
