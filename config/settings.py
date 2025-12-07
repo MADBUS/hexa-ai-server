@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     # OpenAI Settings (필수)
     OPENAI_API_KEY: str
 
+    # Redis Settings (선택 - 기본값 localhost)
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: str | None = None
+
     class Config:
         env_file = ".env"
         case_sensitive = True
