@@ -87,8 +87,8 @@ Adapter (Web) → Application (UseCase) → Domain ← Infrastructure (DB, API)
 - [x] `HAIS-10` [Auth] Repository Port + Redis 세션
   - OAuthIdentityRepositoryPort, UserRepositoryPort 인터페이스
   - In-Memory 구현 (테스트용)
-  - SessionRepositoryPort + In-Memory 구현 (Redis는 인프라 구축 시 추가)
-  - 세션 생성/조회/삭제
+  - SessionRepositoryPort + In-Memory/Redis 구현
+  - 세션 생성/조회/삭제 (TTL 지원)
 
 - [ ] `HAIS-11` [Auth] OAuth 콜백 처리
   - Google/Kakao OAuth 로그인 (이메일 로그인 없음)

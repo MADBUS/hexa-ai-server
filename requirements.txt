@@ -10,3 +10,5 @@ sqlalchemy
 pymysql
 pytest
 pytest-mock
+redis
+fakeredis
