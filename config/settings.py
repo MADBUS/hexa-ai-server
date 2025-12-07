@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_PASSWORD: str | None = None
 
+    # Server Settings
+    BASE_URL: str = "http://localhost:8000"  # production에서는 도메인으로
+
+    # Google OAuth Settings
+    GOOGLE_CLIENT_ID: str
+    GOOGLE_CLIENT_SECRET: str
+
     class Config:
         env_file = ".env"
         case_sensitive = True

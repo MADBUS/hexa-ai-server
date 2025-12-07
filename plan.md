@@ -43,6 +43,34 @@ Adapter (Web) → Application (UseCase) → Domain ← Infrastructure (DB, API)
 
 ---
 
+## 설계 원칙 (Anti Over-Engineering)
+
+> **YAGNI + KISS 우선**
+
+### ❌ 하지 말 것
+- **추상 포트가 구현체 1개일 때**: `OAuthProviderPort` → `GoogleOAuthProvider` 같은 불필요한 추상화
+- **복잡한 DI 셋업**: `register_provider()`, `set_use_case()` 같은 초기화 함수
+- **파라미터 릴레이**: 설정값을 계속 전달하는 대신 필요한 곳에서 직접 읽기
+
+### ✅ 해야 할 것
+- **Service 직접 사용**: `GoogleOAuthService`처럼 구체적인 서비스 클래스
+- **Router에서 직접 인스턴스화**: 필요한 곳에서 바로 생성
+- **설정은 config에서**: `get_settings()`로 필요할 때 읽기 (os.getenv 금지)
+- **추상화는 구현체가 2개 이상일 때만**: 실제 교체 가능성이 있을 때
+
+### 참고 패턴
+```python
+# Router에서 직접 생성
+service = GoogleOAuthService()
+
+# Service는 config에서 읽기
+from config.settings import get_settings
+settings = get_settings()
+client_id = settings.GOOGLE_CLIENT_ID
+```
+
+---
+
 ## Backlog
 
 > **개발 전략**: Walking Skeleton + 수직 슬라이스 (Vertical Slice)
@@ -84,37 +112,30 @@ Adapter (Web) → Application (UseCase) → Domain ← Infrastructure (DB, API)
   - email 추가 (OAuth provider에서 받은 이메일)
   - 순수 OAuth 정보만 담당
 
-- [x] `HAIS-10` [Auth] Repository Port + Redis 세션
-  - OAuthIdentityRepositoryPort, UserRepositoryPort 인터페이스
-  - In-Memory 구현 (테스트용)
-  - SessionRepositoryPort + In-Memory/Redis 구현
-  - 세션 생성/조회/삭제 (TTL 지원)
-
-- [x] `HAIS-11` [Auth] OAuth 콜백 처리
-  - Google/Kakao OAuth 로그인 (이메일 로그인 없음)
-  - 신규 회원 자동 생성
-  - Redis 세션 발급
-
-- [x] `HAIS-12` [Auth] 인증 미들웨어 - 세션 검증, 요청에 user_id 주입
+- [x] `HAIS-10` [Auth] Google OAuth 로그인 + Redis 세션
+  - GoogleOAuthService: Google API 연동 (인증 URL, 토큰 교환, 프로필 조회)
+  - RedisSessionRepository: 세션 저장/조회/삭제 (TTL 지원)
+  - google_oauth_router: /auth/google, /auth/google/callback, /auth/status, /auth/logout
+  - auth_dependency: 세션 검증, user_id 주입
 
 ### Phase 1: 병렬 개발 - Consult + Converter (동시 진행 가능 🔥)
 
 > **팀 구성 제안**:
-> - **Team Consult** (4명, 페어 2팀): HAIS-13~18 담당
-> - **Team Converter** (2명, 페어 1팀): HAIS-19~21 담당
+> - **Team Consult** (4명, 페어 2팀): HAIS-11~16 담당
+> - **Team Converter** (2명, 페어 1팀): HAIS-17~19 담당
 > - Phase 0 완료 후 두 팀이 동시에 작업 시작 가능!
 > - **각 항목은 2-3시간 단위**로 작게 쪼개져 있어 관리 용이
 
 #### Team Consult: 상담 기능 (Thin Slice 방식 🎯)
 
-- [ ] `HAIS-13` [Consult] 상담 세션 생성 **🔐 인증 필수**
+- [ ] `HAIS-11` [Consult] 상담 세션 생성 **🔐 인증 필수**
   - **📖 유저 스토리**: "로그인한 사용자로서, 상담 세션을 시작하고 싶다"
   - **Domain**: `ConsultSession` (id, user_id, profile, created_at)
   - **Repository**: `ConsultRepositoryPort` + In-Memory 구현
   - **API**: `POST /consult/start` (Header: Authorization) → `{"session_id": "uuid"}`
   - **✅ 인수 조건**: UUID 세션 생성, user_id 연결, 세션 검증, 프로필 저장, curl 테스트 가능
 
-- [ ] `HAIS-14` [Consult] AI 인사 메시지 추가
+- [ ] `HAIS-12` [Consult] AI 인사 메시지 추가
   - **📖 유저 스토리**: "사용자로서, 세션을 시작하면 내 MBTI에 맞는 AI 인사말을 받고 싶다"
   - **Port**: `AICounselorPort` 인터페이스 정의 (generate_greeting 메서드)
   - **Adapter**: `OpenAICounselorAdapter` 구현 (OpenAI API 연동)
@@ -122,7 +143,7 @@ Adapter (Web) → Application (UseCase) → Domain ← Infrastructure (DB, API)
   - **API 확장**: 응답에 `greeting` 필드 추가
   - **✅ 인수 조건**: AI 인사말 포함, MBTI 특성 반영
 
-- [ ] `HAIS-15` [Consult] 메시지 전송 기본 **🔐 인증 필수**
+- [ ] `HAIS-13` [Consult] 메시지 전송 기본 **🔐 인증 필수**
   - **📖 유저 스토리**: "로그인한 사용자로서, 질문을 보내고 AI의 답변을 받고 싶다"
   - **Domain 확장**: `Message` 도메인 (role, content, timestamp)
   - **Domain 확장**: `ConsultSession.add_message()`, `get_messages()`
@@ -131,20 +152,20 @@ Adapter (Web) → Application (UseCase) → Domain ← Infrastructure (DB, API)
   - **API**: `POST /consult/{session_id}/message` (Header: Authorization) → 일반 JSON 응답
   - **✅ 인수 조건**: 메시지 저장, user_id 검증 (세션 소유자만 접근), AI 응답 생성, 대화 히스토리 조회 가능
 
-- [ ] `HAIS-16` [Consult] SSE 스트리밍 추가
+- [ ] `HAIS-14` [Consult] SSE 스트리밍 추가
   - **📖 유저 스토리**: "사용자로서, AI 응답이 한 글자씩 실시간으로 나타나길 원한다"
   - **Adapter 확장**: OpenAI 스트리밍 모드
   - **API 확장**: SSE (Server-Sent Events) 응답 형식
   - **✅ 인수 조건**: 스트리밍 응답, EventSource로 수신 가능
 
-- [ ] `HAIS-17` [Consult] 턴 관리 및 제한
+- [ ] `HAIS-15` [Consult] 턴 관리 및 제한
   - **📖 유저 스토리**: "사용자로서, 3턴 대화 후 자동으로 분석 단계로 전환되길 원한다"
   - **Domain 확장**: `ConsultSession.get_user_turn_count()`, `is_completed()`
   - **UseCase 확장**: 3턴 체크, 초과 시 에러
   - **API 확장**: 응답에 `remaining_turns` 필드 추가
   - **✅ 인수 조건**: 턴 카운트 정확, 3턴 초과 시 400 에러
 
-- [ ] `HAIS-18` [Consult] 분석 결과 생성
+- [ ] `HAIS-16` [Consult] 분석 결과 생성
   - **📖 유저 스토리**: "사용자로서, 3턴 완료 후 MBTI 기반 관계 분석을 받고 싶다"
   - **Domain**: `Analysis` (situation, traits, solutions, cautions)
   - **Port 확장**: `AICounselorPort.generate_analysis()`
@@ -154,7 +175,7 @@ Adapter (Web) → Application (UseCase) → Domain ← Infrastructure (DB, API)
 
 #### Team Converter: 변환 기능 (Thin Slice 방식 🔄)
 
-- [ ] `HAIS-19` [Converter] 메시지 변환 기본 (**Consult와 병렬 가능**)
+- [ ] `HAIS-17` [Converter] 메시지 변환 기본 (**Consult와 병렬 가능**)
   - **📖 유저 스토리**: "사용자로서, 내 메시지를 다른 톤으로 변환하고 싶다"
   - **Domain**: `ToneMessage` (tone, content, explanation)
   - **Port**: `MessageConverterPort` 인터페이스 정의
@@ -162,13 +183,13 @@ Adapter (Web) → Application (UseCase) → Domain ← Infrastructure (DB, API)
   - **API**: `POST /converter/convert` → 1가지 톤 반환
   - **✅ 인수 조건**: 톤 변환 작동, 해설 포함
 
-- [ ] `HAIS-20` [Converter] 3가지 톤 동시 생성
+- [ ] `HAIS-18` [Converter] 3가지 톤 동시 생성
   - **📖 유저 스토리**: "사용자로서, 공손/캐주얼/간결 3가지 버전을 한 번에 받고 싶다"
   - **UseCase**: `ConvertMessageUseCase` - 3가지 톤 병렬 생성
   - **API 확장**: 응답에 3가지 톤 배열
   - **✅ 인수 조건**: 3가지 톤 모두 포함, 각각 해설 있음
 
-- [ ] `HAIS-21` [Converter] MBTI 맞춤 변환
+- [ ] `HAIS-19` [Converter] MBTI 맞춤 변환
   - **📖 유저 스토리**: "사용자로서, 발신자/수신자 MBTI를 고려한 최적의 표현을 원한다"
   - **UseCase 확장**: 발신자/수신자 MBTI 파라미터 추가
   - **Adapter 확장**: 프롬프트에 MBTI 특성 반영
@@ -177,5 +198,5 @@ Adapter (Web) → Application (UseCase) → Domain ← Infrastructure (DB, API)
 
 ### Phase 2: 통합 테스트 (E2E)
 
-- [ ] `HAIS-22` [E2E] 상담 전체 플로우 검증 - 시작 → 3턴 대화 → 분석 조회까지 연결
-- [ ] `HAIS-23` [E2E] 변환 전체 플로우 검증 - 변환 요청 → 3가지 톤 결과 반환
+- [ ] `HAIS-20` [E2E] 상담 전체 플로우 검증 - 시작 → 3턴 대화 → 분석 조회까지 연결
+- [ ] `HAIS-21` [E2E] 변환 전체 플로우 검증 - 변환 요청 → 3가지 톤 결과 반환
