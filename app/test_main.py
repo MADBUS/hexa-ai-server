@@ -6,8 +6,8 @@ from fastapi.testclient import TestClient
 @pytest.fixture
 def client():
     """DB 연결 없이 테스트하기 위해 lifespan을 모킹"""
-    with patch('app.main.engine') as mock_engine:
-        with patch('app.main.Base') as mock_base:
+    with patch('config.database.engine') as mock_engine:
+        with patch('config.database.Base') as mock_base:
             mock_engine.dispose = MagicMock()
             from app.main import app
             with TestClient(app) as c:
