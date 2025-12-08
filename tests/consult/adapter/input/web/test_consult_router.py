@@ -10,6 +10,7 @@ from app.auth.domain.session import Session
 from tests.user.fixtures.fake_user_repository import FakeUserRepository
 from tests.auth.fixtures.fake_session_repository import FakeSessionRepository
 from tests.consult.fixtures.fake_consult_repository import FakeConsultRepository
+from tests.consult.fixtures.fake_ai_counselor import FakeAICounselor
 
 
 @pytest.fixture
@@ -39,7 +40,13 @@ def consult_repo():
 
 
 @pytest.fixture
-def client(app, user_repo, session_repo, consult_repo):
+def ai_counselor():
+    """테스트용 AI Counselor"""
+    return FakeAICounselor()
+
+
+@pytest.fixture
+def client(app, user_repo, session_repo, consult_repo, ai_counselor):
     """테스트 클라이언트"""
     # 의존성 주입 (간단하게 global 변수 사용)
     from app.consult.adapter.input.web import consult_router as router_module
@@ -47,13 +54,14 @@ def client(app, user_repo, session_repo, consult_repo):
 
     router_module._user_repository = user_repo
     router_module._consult_repository = consult_repo
+    router_module._ai_counselor = ai_counselor
     auth_dependency._session_repository = session_repo
 
     return TestClient(app)
 
 
 def test_start_consult_returns_session_id(client, user_repo, session_repo):
-    """인증된 사용자가 상담을 시작하면 세션 ID를 반환한다"""
+    """인증된 사용자가 상담을 시작하면 세션 ID와 AI 인사말을 반환한다"""
     # Given: 로그인한 사용자
     user = User(
         id="user-123",
@@ -73,11 +81,14 @@ def test_start_consult_returns_session_id(client, user_repo, session_repo):
         headers={"Authorization": "Bearer valid-session-123"}
     )
 
-    # Then: 200 OK와 세션 ID를 반환한다
+    # Then: 200 OK와 세션 ID, 인사말을 반환한다
     assert response.status_code == 200
     data = response.json()
     assert "session_id" in data
     assert data["session_id"] is not None
+    assert "greeting" in data
+    assert data["greeting"] is not None
+    assert len(data["greeting"]) > 0
 
 
 def test_start_consult_without_auth_returns_401(client):

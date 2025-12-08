@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from app.consult.application.use_case.start_consult_use_case import StartConsultUseCase
 from app.user.application.port.user_repository_port import UserRepositoryPort
 from app.consult.application.port.consult_repository_port import ConsultRepositoryPort
+from app.consult.application.port.ai_counselor_port import AICounselorPort
 from app.auth.adapter.input.web.auth_dependency import get_current_user_id
 
 consult_router = APIRouter()
@@ -10,6 +11,7 @@ consult_router = APIRouter()
 # Global repository instances (will be injected in tests)
 _user_repository: UserRepositoryPort | None = None
 _consult_repository: ConsultRepositoryPort | None = None
+_ai_counselor: AICounselorPort | None = None
 
 
 @consult_router.post("/start")
@@ -50,7 +52,13 @@ def start_consult(user_id: str = Depends(get_current_user_id)):
             detail="Consult repository가 설정되지 않았습니다",
         )
 
-    use_case = StartConsultUseCase(_consult_repository)
+    if not _ai_counselor:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI counselor가 설정되지 않았습니다",
+        )
+
+    use_case = StartConsultUseCase(_consult_repository, _ai_counselor)
     result = use_case.execute(user_id=user_id, mbti=user.mbti, gender=user.gender)
 
     return result
