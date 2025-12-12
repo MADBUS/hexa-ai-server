@@ -125,6 +125,36 @@ def send_message(
         )
 
 
+@consult_router.get("/history")
+def get_history(user_id: str = Depends(get_current_user_id)):
+    """
+    완료된 상담 세션 히스토리를 조회한다.
+
+    Returns:
+        완료된 상담 세션 목록 (최신순)
+    """
+    if not _consult_repository:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Consult repository가 설정되지 않았습니다",
+        )
+
+    sessions = _consult_repository.find_completed_by_user_id(user_id)
+
+    return {
+        "sessions": [
+            {
+                "id": session.id,
+                "created_at": session.created_at.isoformat(),
+                "mbti": session.mbti.value,
+                "gender": session.gender.value,
+                "analysis": session.get_analysis(),
+            }
+            for session in sessions
+        ]
+    }
+
+
 @consult_router.post("/{session_id}/message/stream")
 def send_message_stream(
     session_id: str,

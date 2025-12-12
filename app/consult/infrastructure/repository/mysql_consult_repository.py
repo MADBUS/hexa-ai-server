@@ -1,3 +1,4 @@
+import json
 from sqlalchemy.orm import Session
 
 from app.consult.application.port.consult_repository_port import ConsultRepositoryPort
@@ -17,6 +18,11 @@ class MySQLConsultRepository(ConsultRepositoryPort):
 
     def save(self, session: ConsultSession) -> None:
         """세션을 저장한다 (insert 또는 update)"""
+        # 분석 결과를 JSON으로 변환
+        analysis_json = None
+        if session.get_analysis():
+            analysis_json = json.dumps(session.get_analysis(), ensure_ascii=False)
+
         # 세션 저장 (merge로 insert/update 처리)
         session_model = ConsultSessionModel(
             id=session.id,
@@ -24,6 +30,8 @@ class MySQLConsultRepository(ConsultRepositoryPort):
             mbti=session.mbti.value,
             gender=session.gender.value,
             created_at=session.created_at,
+            is_completed=session.is_completed(),
+            analysis_json=analysis_json,
         )
         self._db.merge(session_model)
 
@@ -67,6 +75,11 @@ class MySQLConsultRepository(ConsultRepositoryPort):
             for m in message_models
         ]
 
+        # 분석 결과 파싱
+        analysis = None
+        if session_model.analysis_json:
+            analysis = json.loads(session_model.analysis_json)
+
         return ConsultSession(
             id=session_model.id,
             user_id=session_model.user_id,
@@ -74,4 +87,33 @@ class MySQLConsultRepository(ConsultRepositoryPort):
             gender=Gender(session_model.gender),
             created_at=session_model.created_at,
             messages=messages,
+            completed=session_model.is_completed or False,
+            analysis=analysis,
         )
+
+    def find_completed_by_user_id(self, user_id: str) -> list[ConsultSession]:
+        """user_id로 완료된 세션 목록을 조회한다 (최신순)"""
+        session_models = self._db.query(ConsultSessionModel).filter(
+            ConsultSessionModel.user_id == user_id,
+            ConsultSessionModel.is_completed == True
+        ).order_by(ConsultSessionModel.created_at.desc()).all()
+
+        sessions = []
+        for session_model in session_models:
+            # 분석 결과 파싱
+            analysis = None
+            if session_model.analysis_json:
+                analysis = json.loads(session_model.analysis_json)
+
+            sessions.append(ConsultSession(
+                id=session_model.id,
+                user_id=session_model.user_id,
+                mbti=MBTI(session_model.mbti),
+                gender=Gender(session_model.gender),
+                created_at=session_model.created_at,
+                messages=[],  # 히스토리에서는 메시지 로드 안함
+                completed=True,
+                analysis=analysis,
+            ))
+
+        return sessions

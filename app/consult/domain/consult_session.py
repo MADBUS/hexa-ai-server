@@ -15,6 +15,8 @@ class ConsultSession:
         gender: Gender,
         created_at: datetime | None = None,
         messages: list[Message] | None = None,
+        completed: bool = False,
+        analysis: dict | None = None,
     ):
         self._validate(id, user_id, mbti, gender)
         self.id = id
@@ -23,6 +25,8 @@ class ConsultSession:
         self.gender = gender
         self.created_at = created_at or datetime.now()
         self._messages: list[Message] = messages or []
+        self._completed = completed
+        self._analysis = analysis
 
     def _validate(self, id: str, user_id: str, mbti: MBTI | None, gender: Gender | None) -> None:
         """ConsultSession 값의 유효성을 검증한다"""
@@ -48,5 +52,14 @@ class ConsultSession:
         return sum(1 for msg in self._messages if msg.role == "user")
 
     def is_completed(self) -> bool:
-        """세션이 완료되었는지 (5턴 이상) 반환한다"""
-        return self.get_user_turn_count() >= 5
+        """세션이 완료되었는지 (5턴 이상 또는 완료 플래그) 반환한다"""
+        return self._completed or self.get_user_turn_count() >= 5
+
+    def complete_with_analysis(self, analysis: dict) -> None:
+        """세션을 완료하고 분석 결과를 저장한다"""
+        self._completed = True
+        self._analysis = analysis
+
+    def get_analysis(self) -> dict | None:
+        """분석 결과를 반환한다"""
+        return self._analysis

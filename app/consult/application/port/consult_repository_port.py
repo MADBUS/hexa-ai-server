@@ -15,3 +15,8 @@ class ConsultRepositoryPort(ABC):
     def find_by_id(self, session_id: str) -> ConsultSession | None:
         """id로 세션을 조회한다"""
         pass
+
+    @abstractmethod
+    def find_completed_by_user_id(self, user_id: str) -> list[ConsultSession]:
+        """user_id로 완료된 세션 목록을 조회한다"""
+        pass

@@ -63,9 +63,14 @@ class SendMessageUseCase:
             "is_completed": is_completed,
         }
 
-        # 9. 5턴 완료 시 분석 자동 생성
+        # 9. 5턴 완료 시 분석 자동 생성 및 저장
         if is_completed:
             analysis = self._ai_counselor.generate_analysis(session)
-            result["analysis"] = analysis.to_dict()
+            analysis_dict = analysis.to_dict()
+            result["analysis"] = analysis_dict
+
+            # 분석 결과를 세션에 저장하고 DB에 반영
+            session.complete_with_analysis(analysis_dict)
+            self._repository.save(session)
 
         return result

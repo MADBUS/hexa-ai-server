@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime
+from sqlalchemy import Column, String, DateTime, Text, Boolean
 from config.database import Base
 
 
@@ -12,3 +12,5 @@ class ConsultSessionModel(Base):
     mbti = Column(String(4), nullable=False)
     gender = Column(String(10), nullable=False)
     created_at = Column(DateTime, nullable=False)
+    is_completed = Column(Boolean, default=False, nullable=False)
+    analysis_json = Column(Text, nullable=True)  # JSON 형태로 분석 결과 저장

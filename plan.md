@@ -112,9 +112,9 @@ client_id = settings.GOOGLE_CLIENT_ID
   - email 추가 (OAuth provider에서 받은 이메일)
   - 순수 OAuth 정보만 담당
 
-- [x] `HAIS-10` [Auth] Google OAuth 로그인 + Redis 세션
+- [x] `HAIS-10` [Auth] Google OAuth 로그인
   - GoogleOAuthService: Google API 연동 (인증 URL, 토큰 교환, 프로필 조회)
-  - RedisSessionRepository: 세션 저장/조회/삭제 (TTL 지원)
+  - SessionRepository: 세션 저장/조회/삭제 (TTL 지원)
   - google_oauth_router: /auth/google, /auth/google/callback, /auth/status, /auth/logout
   - auth_dependency: 세션 검증, user_id 주입
 
@@ -216,7 +216,26 @@ client_id = settings.GOOGLE_CLIENT_ID
   - **API 확장**: MBTI 검증, 400 에러 핸들링
   - **✅ 인수 조건**: MBTI 특성 반영된 변환, 잘못된 MBTI는 400
 
-### Phase 2: 통합 테스트 (E2E)
+### Phase 2: 마이페이지 & 상담 히스토리
 
-- [ ] `HAIS-20` [E2E] 상담 전체 플로우 검증 - 시작 → 3턴 대화 → 분석 조회까지 연결
-- [ ] `HAIS-21` [E2E] 변환 전체 플로우 검증 - 변환 요청 → 3가지 톤 결과 반환
+- [x] `HAIS-20` [Consult] 분석 결과 DB 저장
+  - **📖 유저 스토리**: "사용자로서, 상담 분석 결과를 나중에 다시 보고 싶다"
+  - **DB 스키마**: consult_sessions 테이블에 analysis_json 컬럼 추가
+  - **UseCase 수정**: 분석 생성 시 DB에 저장
+  - **✅ 인수 조건**: 분석 결과가 DB에 영속화됨
+
+- [x] `HAIS-21` [Consult] 상담 히스토리 API
+  - **📖 유저 스토리**: "사용자로서, 내 과거 상담 목록을 조회하고 싶다"
+  - **API**: `GET /consult/history` → 사용자의 완료된 상담 목록 + 분석 결과
+  - **✅ 인수 조건**: 로그인한 사용자의 상담 히스토리 조회 가능
+
+- [x] `HAIS-22` [Frontend] 마이페이지 생성
+  - **📖 유저 스토리**: "사용자로서, 헤더의 이메일을 클릭하면 마이페이지에서 상담 히스토리를 보고 싶다"
+  - **페이지**: `/mypage` - 프로필 정보 + 상담 히스토리 목록
+  - **헤더 수정**: 이메일 클릭 시 마이페이지로 이동
+  - **✅ 인수 조건**: 마이페이지에서 과거 분석 결과 카드 형태로 표시
+
+### Phase 3: 통합 테스트 (E2E)
+
+- [ ] `HAIS-23` [E2E] 상담 전체 플로우 검증 - 시작 → 5턴 대화 → 분석 → 마이페이지 조회
+- [ ] `HAIS-24` [E2E] 변환 전체 플로우 검증 - 변환 요청 → 3가지 톤 결과 반환
