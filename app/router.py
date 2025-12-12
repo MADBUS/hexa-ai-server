@@ -6,8 +6,6 @@ All application routers are registered here and imported into main.py.
 from fastapi import FastAPI
 
 from app.auth.adapter.input.web.google_oauth_router import google_oauth_router
-from app.data.adapter.input.web.data_router import data_router
-from app.data.infrastructure.orm.data_orm import DataORM  # noqa: F401
 from app.user.infrastructure.model.user_model import UserModel  # noqa: F401
 from app.consult.infrastructure.model.consult_session_model import ConsultSessionModel  # noqa: F401
 from app.consult.adapter.input.web.consult_router import consult_router
@@ -30,9 +28,6 @@ def setup_routers(app: FastAPI) -> None:
 
     # User router
     app.include_router(user_router, prefix="/user")
-
-    # Data router
-    app.include_router(data_router, prefix="/data")
 
     # Converter router (HAIS-17, 18)
     app.include_router(converter_router, prefix="/converter")

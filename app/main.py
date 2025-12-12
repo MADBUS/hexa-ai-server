@@ -1,10 +1,8 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
-from app.auth.adapter.input.web.google_oauth_router import google_oauth_router
 from app.consult.adapter.input.web.consult_router import consult_router
 from app.converter.adapter.input.web.converter_router import converter_router
-from app.data.adapter.input.web.data_router import data_router
 from app.router import setup_routers
 from app.user.adapter.input.web.user_router import user_router
 from config.database import engine, Base
@@ -54,7 +52,6 @@ app.add_middleware(
 # app.include_router(google_oauth_router, prefix="/oauth")
 app.include_router(consult_router, prefix="/consult")
 app.include_router(converter_router, prefix="/converter")
-app.include_router(data_router, prefix="/data")
 app.include_router(user_router, prefix="/user")
 # Setup all routers
 setup_routers(app)
