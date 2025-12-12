@@ -6,6 +6,7 @@ from openai import OpenAI
 from app.converter.application.port.message_converter_port import MessageConverterPort
 from app.converter.domain.tone_message import ToneMessage
 from app.shared.vo.mbti import MBTI
+from config.settings import get_settings
 
 
 class OpenAIMessageConverter(MessageConverterPort):
@@ -13,7 +14,8 @@ class OpenAIMessageConverter(MessageConverterPort):
 
     def __init__(self):
         """OpenAI 클라이언트 초기화"""
-        self.client = OpenAI()
+        settings = get_settings()
+        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
     def convert(
         self,
